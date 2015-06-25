@@ -1,0 +1,248 @@
+<!doctype html>
+<title>Karaoke Index{% if start %} - {{ start }}{% endif %}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<style>
+
+body {
+  text-align: center;
+  font-family: sans-serif;
+}
+
+* {
+  border-width: 0;
+  border-style: solid;
+  border-color: black;
+}
+
+div {
+  display: -webkit-flex;
+  display: -ms-flex;
+  display: flex;
+  -webkit-flex: 1;
+  flex: 1;
+}
+
+#index {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 5px;
+  font-size: 1.25rem;
+  display: block;
+}
+
+#index div {
+  display: inline-block;
+}
+
+#table {
+  width: 100%;
+  max-width: 800px;
+  display: inline-block;
+  text-align: left;
+  border-bottom-width: 1px;
+}
+
+#table, #thead, .tbody, .songs {
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+
+#thead {
+  border-width: 1px 0px 3px 0px;
+  font-weight: bold;
+}
+{% if songs is defined %}
+.artist, .th:first-child {
+{% elif artists is defined %}
+.songs, .th:last-child {
+{% endif %}
+  -webkit-flex: 2;
+  flex: 2;
+}
+
+.tr + .tr {
+  border-top-width: 3px;
+}
+
+.th + .th, .tr {
+  border-left-width: 1px;
+}
+
+.tr, .artist {
+  border-right-width: 1px;
+}
+
+.song + .song {
+  border-top-width: 1px;
+}
+
+p {
+  margin: 0;
+  padding: 0 0 0 25px;
+  text-indent: -25px;
+}
+
+.name_container {
+  display: block;
+}
+
+.name {
+  position: -webkit-sticky;
+  position: -ms-sticky;
+  position: -blink-sticky;
+  position: -o-sticky;
+  position: -moz-sticky;
+  position: sticky;
+  display: block;
+  top: 5px;
+}
+
+.pad {
+  padding: 5px;
+}
+
+@media (max-width: 600px) {
+  div {
+    display: block;
+  }
+
+  #thead {
+    display: none;
+  }
+  .artist {
+    font-weight: bold;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    border-width: 0 0 2px 0;
+    background-color: rgba(200, 200, 200, 0.8);
+    {% if artists is defined %}
+    position: -webkit-sticky;
+    position: -ms-sticky;
+    position: -blink-sticky;
+    position: -o-sticky;
+    position: -moz-sticky;
+    position: sticky;
+    top: 0px;
+    {% endif %}
+  }
+
+  .name {
+    position: auto;
+  }
+
+  .tr + .tr, .tr {
+    border-width: 2px 1px 0 1px;
+  }
+
+}
+
+</style>
+<div id="index">
+  <div>
+    <a href="{{ url_for('%s_index' % type, start='0-9') }}">#</a> /
+    <a href="{{ url_for('%s_index' % type, start='a') }}">A</a> /
+    <a href="{{ url_for('%s_index' % type, start='b') }}">B</a> /
+    <a href="{{ url_for('%s_index' % type, start='c') }}">C</a> /
+    <a href="{{ url_for('%s_index' % type, start='d') }}">D</a> /
+    <a href="{{ url_for('%s_index' % type, start='e') }}">E</a> /
+    <a href="{{ url_for('%s_index' % type, start='f') }}">F</a> /
+    <a href="{{ url_for('%s_index' % type, start='g') }}">G</a> /
+    <a href="{{ url_for('%s_index' % type, start='h') }}">H</a> /
+    <a href="{{ url_for('%s_index' % type, start='i') }}">I</a> /
+    <a href="{{ url_for('%s_index' % type, start='j') }}">J</a> /
+    <a href="{{ url_for('%s_index' % type, start='k') }}">K</a> /
+    <a href="{{ url_for('%s_index' % type, start='l') }}">L</a> /
+    <a href="{{ url_for('%s_index' % type, start='m') }}">M</a> /
+  </div>
+  <div>
+    <a href="{{ url_for('%s_index' % type, start='n') }}">N</a> /
+    <a href="{{ url_for('%s_index' % type, start='o') }}">O</a> /
+    <a href="{{ url_for('%s_index' % type, start='p') }}">P</a> /
+    <a href="{{ url_for('%s_index' % type, start='q') }}">Q</a> /
+    <a href="{{ url_for('%s_index' % type, start='r') }}">R</a> /
+    <a href="{{ url_for('%s_index' % type, start='s') }}">S</a> /
+    <a href="{{ url_for('%s_index' % type, start='t') }}">T</a> /
+    <a href="{{ url_for('%s_index' % type, start='u') }}">U</a> /
+    <a href="{{ url_for('%s_index' % type, start='v') }}">V</a> /
+    <a href="{{ url_for('%s_index' % type, start='w') }}">W</a> /
+    <a href="{{ url_for('%s_index' % type, start='x') }}">X</a> /
+    <a href="{{ url_for('%s_index' % type, start='y') }}">Y</a> /
+    <a href="{{ url_for('%s_index' % type, start='z') }}">Z</a>
+  </div>
+</div>
+<div id="table">
+  <div id="thead">
+    <div class="tr">
+      <div class="th pad">
+        {% if artists is defined %}
+        Artist
+      </div>
+      <div class="th">
+        <div class="pad">
+          Song Title
+          {% else %}
+        Song Title
+      </div>
+      <div class="th">
+        <div class="pad">
+          Artist
+        {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tbody">
+  {% if artists is defined %}
+  {% for artist in artists %}
+    <div class="tr">
+      <div class="td artist pad">
+        <div class="name_container">
+          <div class="name">
+            <p>
+              {{ artist.name }}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="songs">
+        {% for song in artist.songs|sort(attribute='sort') %}
+          <div class="td song pad">
+            <p>
+              {{ song.title }}
+            </p>
+          </div>
+        {% else %}
+          <div class="td song pad"> --- </div>
+      {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+  {% elif songs is defined %}
+  {% for song in songs %}
+    <div class="tr">
+      <div class="td artist pad">
+        <div class="name_container">
+          <div class="name">
+            <p>
+              {{ song.title }}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="songs">
+        {% for artist in song.artists %}
+          <div class="td song pad">
+            <p>
+              {{ artist.name }}
+            </p>
+          </div>
+        {% else %}
+          <div class="td song pad"> --- </div>
+      {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+
+  {% endif %}
+  </div>
+</div>
