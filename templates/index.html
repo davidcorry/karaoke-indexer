@@ -219,6 +219,7 @@ p {
   {% endfor %}
   {% elif songs is defined %}
   {% for song in songs %}
+  {% if not song.is_alias %}
     <div class="tr">
       <div class="td artist pad">
         <div class="name_container">
@@ -241,8 +242,8 @@ p {
       {% endfor %}
       </div>
     </div>
+    {% endif %}
   {% endfor %}
-
   {% endif %}
   </div>
 </div>

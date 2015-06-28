@@ -58,7 +58,8 @@ class Song(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     title = db.Column(db.Text, nullable=False, unique=True)
-    sort = db.Column(db.Text, nullable=False)
+    sort = db.Column(db.Text, nullable=False, default=False)
+    is_alias = db.Column(db.Boolean)
 
     def __repr__(self):
         return '<Song "%s">' % (self.title, )
