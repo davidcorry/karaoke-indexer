@@ -205,10 +205,10 @@ p {
         </div>
       </div>
       <div class="songs">
-        {% for titles in artist.titles|sort(attribute='sort') %}
+        {% for song in artist.songs|sort(attribute='sort') %}
           <div class="td song pad">
             <p>
-              {{ titles.title }}
+              {{ song.title }}
             </p>
           </div>
         {% else %}

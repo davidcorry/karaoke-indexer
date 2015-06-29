@@ -39,7 +39,12 @@ class Artist(db.Model):
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.Text, nullable=False, unique=True)
     files = db.relationship('SongFile', backref='artist', lazy='dynamic')
-    titles = db.relationship('Song', secondary="songfiles", backref=db.backref('artists', lazy='dynamic'))
+    _songs = db.relationship('Song', secondary="songfiles", backref=db.backref('artists', lazy='dynamic'))
+    _song_aliases = db.relationship('SongAlias', backref='artist', lazy='dynamic')
+
+    def _get_songs(self):
+        return self._songs + self._song_aliases.all()
+    songs = property(_get_songs)
 
     def __repr__(self):
         return '<Artist "%s">' % (self.name, )
@@ -49,11 +54,12 @@ class Artist(db.Model):
         return self.name[0].isdigit()
 
 class Song(db.Model):
-    __tablename__ = 'titles'
+    __tablename__ = 'songs'
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     title = db.Column(db.Text, nullable=False, unique=True)
     sort = db.Column(db.Text, nullable=False)
+    aliases = db.relationship('SongAlias', backref='song', lazy='dynamic')
     files = db.relationship('SongFile', backref='song', lazy='dynamic')
     is_alias = db.Column(db.Boolean)
 
@@ -67,6 +73,44 @@ class Song(db.Model):
 
         return reg.match(title).group(1)[0]
 
+def create_sortname(title):
+    sortname = unidecode(title)
+    reg = re.compile(r'^(\([^\(\)]+\))?(?: )?(.*)')
+    matches = reg.match(sortname)
+    if matches.group(1) is None:
+        sortname = matches.group(2).lower()
+    else:
+        sortname = ('%s %s' % (matches.group(2), matches.group(1))).lower()
+    sortname = re.sub(r'[^a-z0-9 ]', '', sortname)
+    sortname = sortname.strip()
+    return sortname
+
+class SongAlias(db.Model):
+    __tablename__ = 'songaliases'
+
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    title = db.Column(db.Text, nullable=False)
+    sort = db.Column(db.Text, nullable=False)
+    title_id = db.Column(db.Integer, db.ForeignKey('songs.id'))
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'))
+
+    def __init__(self, title, artist, *args, **kwargs):
+        self.title = title
+        self.sort = create_sortname(title)
+
+        artist_search = Artist.query.filter_by(name=artist).first()
+
+        if artist_search is not None:
+            self.artist = artist_search
+        else:
+            self.artist = Artist(name=artist)
+
+        super(SongAlias, self).__init__(*args, **kwargs)
+
+
+    def __repr__(self):
+        return '<Song alias "%s">' % (self.title, )
+
 class SongFile(db.Model):
     __tablename__ = 'songfiles'
 
@@ -74,7 +118,7 @@ class SongFile(db.Model):
     path = db.Column(db.Text, nullable=False)
     filename = db.Column(db.Text, nullable=False)
     source = db.Column(db.Text)
-    title_id = db.Column(db.Integer, db.ForeignKey('titles.id'))
+    title_id = db.Column(db.Integer, db.ForeignKey('songs.id'))
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'))
 
     def __init__(self, path, filename, title, artist, source="", *args, **kwargs):
@@ -89,17 +133,7 @@ class SongFile(db.Model):
         if song_search is not None:
             song_search.files.append(self)
         else:
-            sortname = unidecode(title)
-            reg = re.compile(r'^(\([^\(\)]+\))?(?: )?(.*)')
-            matches = reg.match(sortname)
-            if matches.group(1) is None:
-                sortname = matches.group(2).lower()
-            else:
-                sortname = ('%s %s' % (matches.group(2), matches.group(1))).lower()
-            sortname = re.sub(r'[^a-z0-9 ]', '', sortname)
-            sortname = sortname.strip()
-
-            song = Song(title=title, sort=sortname)
+            song = Song(title=title, sort=create_sortname(title))
             song.files.append(self)
 
         artist_search = Artist.query.filter_by(name=artist).first()
@@ -108,6 +142,8 @@ class SongFile(db.Model):
             self.artist = artist_search
         else:
             self.artist = Artist(name=artist)
+
+        super(SongFile, self).__init__(*args, **kwargs)
 
     def __repr__(self):
         return '<Song file "%s">' % (self.filename, )

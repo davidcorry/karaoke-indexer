@@ -1,4 +1,4 @@
-from karaokeindex import db, app, SongFile
+from karaokeindex import db, app, SongFile, SongAlias
 from icu import Locale, Collator
 import os
 import re
@@ -53,6 +53,9 @@ def init():
                 continue
 
             if is_alias(title_dir):
+                print("a", end="", flush=True)
+                alias = SongAlias(title=title, artist=artist)
+                db.session.add(alias)
                 continue
 
             title = re.sub(r' : ', ' / ', title)
