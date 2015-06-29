@@ -94,7 +94,7 @@ class SongAlias(db.Model):
     title_id = db.Column(db.Integer, db.ForeignKey('songs.id'))
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'))
 
-    def __init__(self, title, artist, *args, **kwargs):
+    def __init__(self, title, artist, song=None, *args, **kwargs):
         self.title = title
         self.sort = create_sortname(title)
 
@@ -104,6 +104,15 @@ class SongAlias(db.Model):
             self.artist = artist_search
         else:
             self.artist = Artist(name=artist)
+
+        if song:
+            song_search = Song.query.filter_by(title=song).first()
+
+            if artist_search is not None:
+                self.song = song_search
+            else:
+                self.song = Song(title=song, sort=create_sortname(song))
+
 
         super(SongAlias, self).__init__(*args, **kwargs)
 
@@ -121,20 +130,18 @@ class SongFile(db.Model):
     title_id = db.Column(db.Integer, db.ForeignKey('songs.id'))
     artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'))
 
-    def __init__(self, path, filename, title, artist, source="", *args, **kwargs):
+    def __init__(self, path, filename, title, artist, source=None, *args, **kwargs):
         self.path = path
         self.filename = filename
-
-        if source is not "":
-            self.source = source
+        self.source = source
 
         song_search = Song.query.filter_by(title=title).first()
 
         if song_search is not None:
-            song_search.files.append(self)
+            self.song = song_search
         else:
             song = Song(title=title, sort=create_sortname(title))
-            song.files.append(self)
+            self.song = song
 
         artist_search = Artist.query.filter_by(name=artist).first()
 

@@ -7,6 +7,8 @@ from unidecode import unidecode
 # Requires PyObjC-Cocoa to be installed.
 try:
     from AppKit import NSWorkspace
+    from Foundation import *
+
     def is_alias (path):
         uti, err = NSWorkspace.sharedWorkspace().typeOfFile_error_(
             os.path.realpath(path), None)
@@ -14,9 +16,24 @@ try:
             raise Exception(unicode(err))
         else:
             return "com.apple.alias-file" == uti
+
+    def target_of_alias(path):
+        url = NSURL.fileURLWithPath_(path)
+        bookmarkData, error = NSURL.bookmarkDataWithContentsOfURL_error_(url, None)
+        if bookmarkData is None:
+            return None
+        opts = NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting
+        resolved, stale, error = NSURL.URLByResolvingBookmarkData_options_relativeToURL_bookmarkDataIsStale_error_(bookmarkData, opts, None, None, None)
+        return resolved.path()
 except:
     def is_alias (path):
         return False
+
+def decolonize(str):
+    str = re.sub(r' : ', ' / ', str)
+    str = re.sub(r'([^ ]):([^ ])', '\\1/\\2', str)
+
+    return str
 
 def init():
     # try:
@@ -54,12 +71,12 @@ def init():
 
             if is_alias(title_dir):
                 print("a", end="", flush=True)
-                alias = SongAlias(title=title, artist=artist)
+                song = decolonize(os.path.basename(target_of_alias(title_dir)))
+                alias = SongAlias(title=title, artist=artist, song=song)
                 db.session.add(alias)
                 continue
 
-            title = re.sub(r' : ', ' / ', title)
-            title = re.sub(r'([^ ]):([^ ])', '\\1/\\2', title)
+            title = decolonize(title)
 
             song_files = [x for x in os.listdir(title_dir) if x.endswith(".mp3") or x.endswith(".mpg")]
 
