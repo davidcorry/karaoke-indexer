@@ -20,12 +20,6 @@ app.jinja_env.trim_blocks = True
 
 db = SQLAlchemy(app)
 
-relationship_table = db.Table('relationship_table',
-    db.Column('artist_id', db.Integer, db.ForeignKey('artists.id'), nullable=False),
-    db.Column('song_id', db.Integer, db.ForeignKey('songs.id'), nullable=False),
-    db.PrimaryKeyConstraint('artist_id', 'song_id')
-)
-
 def regexp(expr, item):
     item = unidecode(item)
     reg = re.compile(r'^(?:\([^\(\)]+\) )?(?:[^a-zA-Z0-9]+)?(.).*')
@@ -44,7 +38,8 @@ class Artist(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     name = db.Column(db.Text, nullable=False, unique=True)
-    songs = db.relationship('Song', secondary=relationship_table, backref=db.backref('artists', lazy='dynamic'))
+    files = db.relationship('SongFile', backref='artist', lazy='dynamic')
+    titles = db.relationship('Song', secondary="songfiles", backref=db.backref('artists', lazy='dynamic'))
 
     def __repr__(self):
         return '<Artist "%s">' % (self.name, )
@@ -54,15 +49,16 @@ class Artist(db.Model):
         return self.name[0].isdigit()
 
 class Song(db.Model):
-    __tablename__ = 'songs'
+    __tablename__ = 'titles'
 
     id = db.Column(db.Integer, primary_key=True, nullable=False)
     title = db.Column(db.Text, nullable=False, unique=True)
-    sort = db.Column(db.Text, nullable=False, default=False)
+    sort = db.Column(db.Text, nullable=False)
+    files = db.relationship('SongFile', backref='song', lazy='dynamic')
     is_alias = db.Column(db.Boolean)
 
     def __repr__(self):
-        return '<Song "%s">' % (self.title, )
+        return '<Song title "%s">' % (self.title, )
 
     @hybrid_property
     def first_character(self):
@@ -70,6 +66,55 @@ class Song(db.Model):
         reg = re.compile(r'^(?:\([^\(\)]+\) )?(?:[^a-zA-Z0-9]+)?(.*)')
 
         return reg.match(title).group(1)[0]
+
+class SongFile(db.Model):
+    __tablename__ = 'songfiles'
+
+    id = db.Column(db.Integer, primary_key=True, nullable=False)
+    path = db.Column(db.Text, nullable=False)
+    filename = db.Column(db.Text, nullable=False)
+    source = db.Column(db.Text)
+    title_id = db.Column(db.Integer, db.ForeignKey('titles.id'))
+    artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'))
+
+    def __init__(self, path, filename, title, artist, source="", *args, **kwargs):
+        self.path = path
+        self.filename = filename
+
+        if source is not "":
+            self.source = source
+
+        song_search = Song.query.filter_by(title=title).first()
+
+        if song_search is not None:
+            song_search.files.append(self)
+        else:
+            sortname = unidecode(title)
+            reg = re.compile(r'^(\([^\(\)]+\))?(?: )?(.*)')
+            matches = reg.match(sortname)
+            if matches.group(1) is None:
+                sortname = matches.group(2).lower()
+            else:
+                sortname = ('%s %s' % (matches.group(2), matches.group(1))).lower()
+            sortname = re.sub(r'[^a-z0-9 ]', '', sortname)
+            sortname = sortname.strip()
+
+            song = Song(title=title, sort=sortname)
+            song.files.append(self)
+
+        artist_search = Artist.query.filter_by(name=artist).first()
+
+        if artist_search is not None:
+            self.artist = artist_search
+        else:
+            self.artist = Artist(name=artist)
+
+    def __repr__(self):
+        return '<Song file "%s">' % (self.filename, )
+
+    @hybrid_property
+    def title(self):
+        return self.song.title
 
 @app.route('/')
 def root():

@@ -1,4 +1,4 @@
-from karaokeindex import db, app, Artist, Song
+from karaokeindex import db, app, SongFile
 from icu import Locale, Collator
 import os
 import re
@@ -33,45 +33,37 @@ def init():
 
     collator = Collator.createInstance(Locale('en_US'))
 
-    artist_dirs = sorted(os.listdir(root_dir), key=collator.getSortKey)
+    # artist_dirs = sorted(os.listdir(root_dir), key=collator.getSortKey)
+    artist_dirs = os.listdir(root_dir)
 
-    for dirname in artist_dirs:
-        if dirname == '.DS_Store' or os.path.islink('%s/%s' % (root_dir, dirname)):
+    for artist in artist_dirs:
+        if artist == '.DS_Store' or os.path.islink('%s/%s' % (root_dir, artist)):
             continue
 
-        name = re.sub(r' : ', ' / ', dirname)
 
-        artist = Artist(name=name)
+        name = re.sub(r' : ', ' / ', artist)
 
-        song_dirs = sorted(os.listdir('%s/%s' % (root_dir, dirname)), key=collator.getSortKey)
+        # song_dirs = sorted(os.listdir('%s/%s' % (root_dir, dirname)), key=collator.getSortKey)
+        song_dirs = os.listdir('%s/%s' % (root_dir, artist))
 
-        for songdirname in song_dirs:
-            if songdirname == '.DS_Store' or os.path.islink('%s/%s/%s' % (root_dir, dirname, songdirname)):
+        for title in song_dirs:
+            title_dir = '%s/%s/%s' % (root_dir, artist, title)
+
+            if title == '.DS_Store' or os.path.islink(title_dir):
                 continue
 
-            title = re.sub(r' : ', ' / ', songdirname)
-            title = re.sub(r'([^ ]):([^ ])', '\\1/\\2', songdirname)
+            if is_alias(title_dir):
+                continue
 
-            collision = Song.query.filter_by(title=title).first()
+            title = re.sub(r' : ', ' / ', title)
+            title = re.sub(r'([^ ]):([^ ])', '\\1/\\2', title)
 
-            if collision is not None:
-                song = collision
-            else:
-                sortname = unidecode(songdirname)
-                reg = re.compile(r'^(\([^\(\)]+\))?(?: )?(.*)')
-                matches = reg.match(sortname)
-                if matches.group(1) is None:
-                    sortname = matches.group(2).lower()
-                else:
-                    sortname = ('%s %s' % (matches.group(2), matches.group(1))).lower()
-                sortname = re.sub(r'[^a-z0-9 ]', '', sortname)
-                sortname = sortname.strip()
+            song_files = [x for x in os.listdir(title_dir) if x.endswith(".mp3") or x.endswith(".mpg")]
 
-                song = Song(title=title, sort=sortname, is_alias=is_alias('%s/%s/%s' % (root_dir, dirname, songdirname)))
-
-            artist.songs.append(song)
-
-        db.session.add(artist)
+            for file in song_files:
+                print(".", end="", flush=True)
+                songfile = SongFile(path=title_dir, filename=file, title=title, artist=artist)
+                db.session.add(songfile)
 
     db.session.commit()
 
